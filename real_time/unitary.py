@@ -1,11 +1,20 @@
+import os
 from datetime import datetime, UTC
+import json
 
-import pytz
 import requests
 import polars as pl
 
 API_URL = "https://prim.iledefrance-mobilites.fr/marketplace"
-API_KEY = "oZ7bT3br86bBxHrRZheood1013nRRnmq"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+secrets_file = os.path.join(BASE_DIR, "..", "secrets.json")
+if os.path.isfile(secrets_file):
+    with open(secrets_file, "r") as f:
+        secrets = json.load(f)
+        API_KEY = secrets["api_key"]
+else:
+    raise Exception(f"Cannot read API Key from `{secrets_file}`")
 
 BOISSYS = ("STIF:StopPoint:Q:412802:", "STIF:StopPoint:Q:473984:", "STIF:StopPoint:Q:473988:", "STIF:StopPoint:Q:473987:")
 

@@ -1,15 +1,25 @@
 import os
 import shutil
 from datetime import datetime, UTC
+import json
 
 import pytz
 import requests
 import polars as pl
 
-API_KEY = "oZ7bT3br86bBxHrRZheood1013nRRnmq"
+API_URL = "https://prim.iledefrance-mobilites.fr/marketplace"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-OUTPUT_FILE = "./rera_times.parquet"
-BACKUP_FILE = "./rera_times.parquet.backup"
+secrets_file = os.path.join(BASE_DIR, "..", "secrets.json")
+if os.path.isfile(secrets_file):
+    with open(secrets_file, "r") as f:
+        secrets = json.load(f)
+        API_KEY = secrets["api_key"]
+else:
+    raise Exception(f"Cannot read API Key from `{secrets_file}`")
+
+OUTPUT_FILE = os.path.join(BASE_DIR, "rera_times.parquet")
+BACKUP_FILE = os.path.join(BASE_DIR, "rera_times.parquet.backup")
 
 CLH = "STIF:StopPoint:Q:40918:"
 # Both directions in the global request, with about 30min of history.
@@ -27,7 +37,7 @@ tz = pytz.timezone("Europe/Paris")
 
 now = datetime.now(UTC)
 print("Running request")
-response = requests.get("https://prim.iledefrance-mobilites.fr/marketplace/estimated-timetable", headers={"apiKey": API_KEY})
+response = requests.get(f"{API_URL}/estimated-timetable", headers={"apiKey": API_KEY})
 
 stop_times = list()
 
