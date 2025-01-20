@@ -1,5 +1,4 @@
 import os
-import shutil
 from datetime import datetime, UTC
 import json
 
@@ -22,22 +21,66 @@ OUTPUT_DIR = os.path.join(BASE_DIR, "data")
 if not os.path.isdir(OUTPUT_DIR):
     os.makedirs(OUTPUT_DIR)
 
-CLH = "STIF:StopPoint:Q:40918:"
-# Both directions in the global request, with about 30min of history.
-CP = "STIF:StopPoint:Q:411352:"
-NANTERRE = "STIF:StopPoint:Q:40916:"
-LA_DEFENSE = "STIF:StopPoint:Q:40951:"
-JOINVILLE = "STIF:StopPoint:Q:40932:"
-BOISSY = "STIF:StopPoint:Q:412802:"
-BOISSYS = (
-    "STIF:StopPoint:Q:412802:",
-    "STIF:StopPoint:Q:473984:",
-    "STIF:StopPoint:Q:473988:",
-    "STIF:StopPoint:Q:473987:",
-)
-SUCY = ("STIF:StopPoint:Q:412803:", "STIF:StopPoint:Q:474007:", "STIF:StopPoint:Q:474010:")
-
-RER_A = "STIF:Line::C01742:"
+lines = {
+    "STIF:Line::C01372:",
+    "STIF:Line::C01374:",
+    "STIF:Line::C01378:",
+    "STIF:Line::C01381:",
+    "STIF:Line::C01383:",
+    "STIF:Line::C01391:",
+    "STIF:Line::C01738:",
+    "STIF:Line::C01744:",
+    "STIF:Line::C01747:",
+    "STIF:Line::C02375:",
+    "STIF:Line::C01371:",
+    "STIF:Line::C01382:",
+    "STIF:Line::C01386:",
+    "STIF:Line::C01679:",
+    "STIF:Line::C01746:",
+    "STIF:Line::C01795:",
+    "STIF:Line::C01843:",
+    "STIF:Line::C01857:",
+    "STIF:Line::C02368:",
+    "STIF:Line::C02370:",
+    "STIF:Line::C02711:",
+    "STIF:Line::C00563:",
+    "STIF:Line::C01375:",
+    "STIF:Line::C01390:",
+    "STIF:Line::C01728:",
+    "STIF:Line::C01729:",
+    "STIF:Line::C01731:",
+    "STIF:Line::C01736:",
+    "STIF:Line::C01737:",
+    "STIF:Line::C01740:",
+    "STIF:Line::C01741:",
+    "STIF:Line::C01742:",
+    "STIF:Line::C01743:",
+    "STIF:Line::C01745:",
+    "STIF:Line::C01774:",
+    "STIF:Line::C01794:",
+    "STIF:Line::C01999:",
+    "STIF:Line::C01376:",
+    "STIF:Line::C01380:",
+    "STIF:Line::C01387:",
+    "STIF:Line::C01388:",
+    "STIF:Line::C01389:",
+    "STIF:Line::C01684:",
+    "STIF:Line::C01739:",
+    "STIF:Line::C02317:",
+    "STIF:Line::C02528:",
+    "STIF:Line::C02732:",
+    "STIF:Line::C01373:",
+    "STIF:Line::C01377:",
+    "STIF:Line::C01379:",
+    "STIF:Line::C01384:",
+    "STIF:Line::C01727:",
+    "STIF:Line::C01730:",
+    "STIF:Line::C01748:",
+    "STIF:Line::C01863:",
+    "STIF:Line::C02344:",
+    "STIF:Line::C02372:",
+    "STIF:Line::C02529:",
+}
 
 tz = pytz.timezone("Europe/Paris")
 
@@ -54,9 +97,13 @@ if response.ok:
     timetable = data["EstimatedTimetableDelivery"][0]["EstimatedJourneyVersionFrame"][0][
         "EstimatedVehicleJourney"
     ]
-    rera = list(filter(lambda t: "C01742" in t.get("LineRef", dict()).get("value"), timetable))
-    for trip in rera:
-        longtrain = trip["VehicleFeatureRef"][0] == "longTrain"
+    timetable = list(filter(lambda t: t.get("LineRef", dict()).get("value") in lines, timetable))
+    for trip in timetable:
+        try:
+            longtrain = trip["VehicleFeatureRef"][0] == "longTrain"
+        except IndexError:
+            longtrain = None
+        line_ref = trip["LineRef"]["value"]
         journey_ref = trip["DatedVehicleJourneyRef"]["value"]
         dest_ref = trip["DestinationRef"]["value"]
         dest_name = trip["DestinationName"][0]["value"]
@@ -74,6 +121,7 @@ if response.ok:
             arr_status = call.get("ArrivalStatus")
             stop_times.append(
                 {
+                    "line_ref": line_ref,
                     "journey_ref": journey_ref,
                     "dest_ref": dest_ref,
                     "dest_name": dest_name,
@@ -95,7 +143,7 @@ df = pl.DataFrame(stop_times).with_columns(
     pl.col("aim_arr_time").str.to_datetime(),
 )
 
-output_filename = os.path.join(OUTPUT_DIR, f"{now.year}-{now.month}-{now.day}.parquet")
+output_filename = os.path.join(OUTPUT_DIR, f"{now.year}-{now.month:02}-{now.day:02}.parquet")
 
 if os.path.isfile(output_filename):
     old_df = pl.scan_parquet(output_filename)
