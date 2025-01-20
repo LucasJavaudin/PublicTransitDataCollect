@@ -18,8 +18,9 @@ if os.path.isfile(secrets_file):
 else:
     raise Exception(f"Cannot read API Key from `{secrets_file}`")
 
-OUTPUT_FILE = os.path.join(BASE_DIR, "rera_times.parquet")
-BACKUP_FILE = os.path.join(BASE_DIR, "rera_times.parquet.backup")
+OUTPUT_DIR = os.path.join(BASE_DIR, "data")
+if not os.path.isdir(OUTPUT_DIR):
+    os.makedirs(OUTPUT_DIR)
 
 CLH = "STIF:StopPoint:Q:40918:"
 # Both directions in the global request, with about 30min of history.
@@ -28,7 +29,12 @@ NANTERRE = "STIF:StopPoint:Q:40916:"
 LA_DEFENSE = "STIF:StopPoint:Q:40951:"
 JOINVILLE = "STIF:StopPoint:Q:40932:"
 BOISSY = "STIF:StopPoint:Q:412802:"
-BOISSYS = ("STIF:StopPoint:Q:412802:", "STIF:StopPoint:Q:473984:", "STIF:StopPoint:Q:473988:", "STIF:StopPoint:Q:473987:")
+BOISSYS = (
+    "STIF:StopPoint:Q:412802:",
+    "STIF:StopPoint:Q:473984:",
+    "STIF:StopPoint:Q:473988:",
+    "STIF:StopPoint:Q:473987:",
+)
 SUCY = ("STIF:StopPoint:Q:412803:", "STIF:StopPoint:Q:474007:", "STIF:StopPoint:Q:474010:")
 
 RER_A = "STIF:Line::C01742:"
@@ -45,7 +51,9 @@ if response.ok:
     print("Reading response")
     data = response.json().get("Siri", dict()).get("ServiceDelivery", dict())
     response_datetime = datetime.fromisoformat(data["ResponseTimestamp"])
-    timetable = data["EstimatedTimetableDelivery"][0]["EstimatedJourneyVersionFrame"][0]["EstimatedVehicleJourney"]
+    timetable = data["EstimatedTimetableDelivery"][0]["EstimatedJourneyVersionFrame"][0][
+        "EstimatedVehicleJourney"
+    ]
     rera = list(filter(lambda t: "C01742" in t.get("LineRef", dict()).get("value"), timetable))
     for trip in rera:
         longtrain = trip["VehicleFeatureRef"][0] == "longTrain"
@@ -64,19 +72,21 @@ if response.ok:
             stop_ref = call["StopPointRef"]["value"]
             dep_status = call.get("DepartureStatus")
             arr_status = call.get("ArrivalStatus")
-            stop_times.append({
-                "journey_ref": journey_ref,
-                "dest_ref": dest_ref,
-                "dest_name": dest_name,
-                "stop_ref": stop_ref,
-                "longtrain": longtrain,
-                "dep_status": dep_status,
-                "arr_status": arr_status,
-                "exp_dep_time": exp_dep_time,
-                "exp_arr_time": exp_arr_time,
-                "aim_dep_time": aim_dep_time,
-                "aim_arr_time": aim_arr_time,
-            })
+            stop_times.append(
+                {
+                    "journey_ref": journey_ref,
+                    "dest_ref": dest_ref,
+                    "dest_name": dest_name,
+                    "stop_ref": stop_ref,
+                    "longtrain": longtrain,
+                    "dep_status": dep_status,
+                    "arr_status": arr_status,
+                    "exp_dep_time": exp_dep_time,
+                    "exp_arr_time": exp_arr_time,
+                    "aim_dep_time": aim_dep_time,
+                    "aim_arr_time": aim_arr_time,
+                }
+            )
 
 df = pl.DataFrame(stop_times).with_columns(
     pl.col("exp_dep_time").str.to_datetime(),
@@ -85,12 +95,16 @@ df = pl.DataFrame(stop_times).with_columns(
     pl.col("aim_arr_time").str.to_datetime(),
 )
 
-if os.path.isfile(OUTPUT_FILE):
-    shutil.copyfile(OUTPUT_FILE, BACKUP_FILE)
+output_filename = os.path.join(OUTPUT_DIR, f"{now.year}-{now.month}-{now.day}.parquet")
 
-    old_df = pl.scan_parquet(OUTPUT_FILE)
+if os.path.isfile(output_filename):
+    old_df = pl.scan_parquet(output_filename)
 
-    df = pl.concat((df.lazy(), old_df), how="vertical", rechunk=True).unique(subset=["journey_ref", "stop_ref"], keep="first", maintain_order=True).collect()
+    df = (
+        pl.concat((df.lazy(), old_df), how="vertical", rechunk=True)
+        .unique(subset=["journey_ref", "stop_ref"], keep="first", maintain_order=True)
+        .collect()
+    )
 
 print(len(df))
-df.write_parquet(OUTPUT_FILE)
+df.write_parquet(output_filename)
