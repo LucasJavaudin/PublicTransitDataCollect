@@ -1,6 +1,6 @@
 import polars as pl
 
-df = pl.read_parquet("./rera_times.parquet")
+df = pl.read_parquet("./data/2025-01-21.parquet")
 
 arrets = pl.scan_parquet("./arrets.parquet")
 arrets = arrets.with_columns(
