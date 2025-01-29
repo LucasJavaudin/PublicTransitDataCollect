@@ -121,10 +121,11 @@ def read_and_load_history(resources, output_dir):
     for i, resource in enumerate(resources):
         try:
             url = resource["payload"]["permanent_url"]
+            modified_date = datetime.fromisoformat(resource["updated_at"]).date()
             print(f"Downloading ({i + 1}/{n}) from {url}")
             download_path = os.path.join(BASE_DIR, "tmp", "gtfs.zip")
             download_zip(url, download_path)
-            read_and_merge(download_path, output_dir)
+            read_and_merge(download_path, output_dir, modified_date)
             os.remove(download_path)
         except Exception as e:
             print("Warning. Failed to read resource!")
@@ -150,7 +151,7 @@ def download_zip(url: str, output_filename: str):
         file.write(response.content)
 
 
-def read_and_merge(input_zipfilename, output_dir):
+def read_and_merge(input_zipfilename, output_dir, modified_date):
     try:
         input_zipfile = ZipFile(input_zipfilename)
     except BadZipFile:
@@ -746,6 +747,9 @@ def read_and_merge(input_zipfilename, output_dir):
     assert (
         start_date.year != 9999 and end_date.year != 1
     ), "Either calendar.txt or calendar_dates.txt must be provided"
+
+    # Start date cannot be prior to the GTFS file modification date.
+    start_date = max(start_date, modified_date)
 
     if VERBOSE:
         print("Finding trips by date")
