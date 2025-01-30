@@ -14,6 +14,7 @@ for directory in os.listdir(OUTPUT_DIR):
             pl.scan_parquet(filename)
             .filter(pl.col("location_type").is_in(("stop", "station")))
             .select("stop_name", "stop_lat", "stop_lon", "location_type")
+            .with_columns(slug=pl.lit(directory))
         )
         if all_stops is None:
             all_stops = stops
