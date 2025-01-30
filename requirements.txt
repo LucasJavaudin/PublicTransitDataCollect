@@ -14,6 +14,7 @@ jedi==0.19.2
 kiwisolver==1.4.8
 matplotlib==3.10.0
 matplotlib-inline==0.1.7
+networkx==3.4.2
 numpy==2.2.1
 packaging==24.2
 pandas==2.2.3
@@ -24,6 +25,7 @@ polars==1.19.0
 prompt_toolkit==3.0.48
 ptyprocess==0.7.0
 pure_eval==0.2.3
+pyarrow==19.0.0
 Pygments==2.18.0
 pyogrio==0.10.0
 pyparsing==3.2.1

@@ -29,6 +29,7 @@ gdf = gpd.GeoDataFrame(
     {
         "stop_name": df["stop_name"],
         "location_type": df["location_type"],
+        "slug": df["slug"],
     },
     geometry=gpd.GeoSeries.from_xy(df["stop_lon"], df["stop_lat"], crs="epsg:4326"),
 )
