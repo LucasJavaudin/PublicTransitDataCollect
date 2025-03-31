@@ -370,7 +370,7 @@ def read_and_merge(input_zipfilename, output_dir, modified_date):
         # Add new stops and stops with updated characteristics.
         # Columns `stop_id` and `parent_station_id` are null at that point for the newly added stops.
         all_stops = pl.concat((previous_stops, stops), how="diagonal", rechunk=True).unique(
-            subset=cs.exclude("stop_id", "parent_station_id"), maintain_order=True
+            subset=cs.exclude("stop_id", "parent_station_id"), maintain_order=True, keep="first"
         )
         # Add stops that were not updated but whose parent station was updated (we do it twice to handle
         # parents' of parents).
