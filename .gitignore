@@ -1,7 +1,12 @@
 # Custom
 data/
+output/
+real_time/data/
+real_time/graphs/
+real_time/idf/
 tmp/
 secrets.json
+*.qgz
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
