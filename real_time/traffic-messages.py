@@ -161,10 +161,14 @@ for line in lines:
             from_to_stops = list(
                 filter(lambda x: x is not None, map(get_from_to_stops, impacted_objects))
             )
-            period = next(
-                filter(lambda p: is_valid_period(p, now), disruption["application_periods"])
-            )
-            begin = datetime.fromisoformat(period["begin"]).astimezone(tz)
+            try:
+                period = next(
+                    filter(lambda p: is_valid_period(p, now), disruption["application_periods"])
+                )
+            except StopIteration:
+                begin = None
+            else:
+                begin = datetime.fromisoformat(period["begin"]).astimezone(tz)
             x = {
                 "id": disruption["disruption_id"],
                 "line": line,
@@ -207,7 +211,7 @@ if os.path.isfile(output_filename):
     old_df = pl.scan_parquet(output_filename)
 
     df = (
-        pl.concat((df.lazy(), old_df), how="vertical", rechunk=True)
+        pl.concat((old_df, df.lazy()), how="vertical", rechunk=True)
         .unique(subset=["id"], keep="last", maintain_order=True)
         .collect()
     )
